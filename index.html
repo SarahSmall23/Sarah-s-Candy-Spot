@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sarah's Candy Spot</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #fff0f6; }
+    header, footer { background: #d8516a; color: white; padding: 1rem; }
+    nav a { margin: 0 1rem; color: white; text-decoration: none; font-weight: bold; }
+    nav a:hover { text-decoration: underline; }
+    main { padding: 2rem; max-width: 900px; margin: auto; }
+    .hidden { display: none; }
+    .section img { max-width: 100%; border-radius: 10px; }
+    .candy-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; }
+    .candy-item { background: #fff; border: 2px solid #d8516a; padding: 1rem; border-radius: 8px; text-align: center; }
+    .candy-item img { width: 100%; height: auto; border-radius: 8px; }
+    button { background: #d8516a; color: white; padding: 0.5rem 1rem; border: none; border-radius: 5px; cursor: pointer; margin-top: 0.5rem; }
+    button:hover { background: #b43b53; }
+    .cart-item { background: white; padding: 0.5rem; border: 1px solid #d8516a; margin-bottom: 0.5rem; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; }
+    form label { display: block; margin-top: 1rem; }
+    form input, form textarea, form select { width: 100%; padding: 0.5rem; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+
+    /* Toast Message Style */
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #d8516a;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 25px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      font-weight: bold;
+      display: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Sarah's Candy Spot</h1>
+  <nav>
+    <a href="#" onclick="showSection('home')">Home</a>
+    <a href="#" onclick="showSection('about')">About Us</a>
+    <a href="#" onclick="showSection('shop')">Shop</a>
+    <a href="#" onclick="showSection('cart')">Cart (<span id="cartCount">0</span>)</a>
+    <a href="#" onclick="tryCheckout()">Checkout</a>
+    <a href="#" onclick="showSection('contact')">Contact Us</a>
+  </nav>
+</header>
+
+<main>
+  <!-- Sections -->
+  <section id="home" class="section">
+    <h2>Welcome to Sarah's Candy Spot!</h2>
+    <p>Delicious, handcrafted candies delivered to your door!</p>
+    <img src="Poster.jpg" alt="Candies" />
+  </section>
+
+  <section id="about" class="section hidden">
+    <h2>About Us</h2>
+    <p>We craft delicious candies with love and joy since 2025.</p>
+  </section>
+
+  <section id="shop" class="section hidden">
+    <h2>Shop Our Candies</h2>
+    <div class="candy-list" id="candyList"></div>
+  </section>
+
+  <section id="cart" class="section hidden">
+    <h2>Your Cart</h2>
+    <div id="cartItems"><p>Your cart is empty.</p></div>
+    <button onclick="showSection('checkout')" id="checkoutBtn" class="hidden">Proceed to Checkout</button>
+  </section>
+
+  <section id="checkout" class="section hidden">
+    <h2>Checkout</h2>
+    <form id="checkoutForm">
+      <label for="name">Full Name:</label>
+      <input type="text" id="name" required />
+
+      <label for="email">Email:</label>
+      <input type="email" id="email" required />
+
+      <label for="address">Shipping Address:</label>
+      <textarea id="address" rows="3" required></textarea>
+
+      <label for="payment">Payment Method:</label>
+      <select id="payment" required>
+        <option value="">-- Select --</option>
+        <option value="card">Credit/Debit Card</option>
+        <option value="paypal">PayPal</option>
+        <option value="cash">Cash on Delivery</option>
+      </select>
+
+      <button type="submit">Place Order</button>
+    </form>
+
+    <!-- PayFast Form -->
+    <form action="https://sandbox.payfast.co.za/eng/process" method="post" id="payfastForm">
+      <input type="hidden" name="merchant_id" value="10040160" />
+      <input type="hidden" name="merchant_key" value="wp2aosefiikcd" />
+      <input type="hidden" name="return_url" value="https://sarahsmall23.github.io/SARACANDY/thankyou" />
+      <input type="hidden" name="cancel_url" value="https://sarahsmall23.github.io/SARACANDY/cancelled" />
+      <input type="hidden" name="notify_url" value="https://sarahsmall23.github.io/SARACANDY/notify" />
+      <input type="hidden" name="amount" id="pf_amount" />
+      <input type="hidden" name="item_name" value="Candy Order from Sarah's Candy Spot" />
+      <input type="hidden" name="name_first" id="pf_name" />
+      <input type="hidden" name="email_address" id="pf_email" />
+    </form>
+  </section>
+
+  <section id="contact" class="section hidden">
+    <h2>Contact Us</h2>
+    <form id="contactForm">
+      <label for="contactName">Name:</label>
+      <input type="text" id="contactName" required />
+
+      <label for="contactEmail">Email:</label>
+      <input type="email" id="contactEmail" required />
+
+      <label for="message">Message:</label>
+      <textarea id="message" rows="4" required></textarea>
+
+      <button type="submit">Send Message</button>
+    </form>
+  </section>
+</main>
+
+<footer>
+  &copy; 2025 Sarah's Candy Spot
+</footer>
+
+<!-- Toast Message -->
+<div id="toast"></div>
+
+<script>
+  const candies = [
+    {id:1, name:'Candy Combo', price: 55, img:'Candy Combo.jpg'},
+    {id:2, name:'Rare Candy', price: 20, img:'Rare Candy.jpg'},
+    {id:3, name:'Smooth Candy', price: 30, img:'Smooth Candy.jpg'},
+    {id:4, name:'Sweet Sunshine Candy', price: 6, img:'Sweet Sunshine Candy.jpg'},
+    {id:5, name:'Sweet Sunshine Combo', price: 15, img:'Sweet Sunshine Combo.jpg'},
+    {id:6, name:'Vibrant Spring Mix', price: 35, img:'Vibrant Spring Mix.jpg'},
+    {id:7, name:'Blooming Joy Bundle', price: 10, img:'Blooming Joy Bundle.jpg'},
+  ];
+
+  let cart = [];
+
+  function showSection(id) {
+    document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+    document.getElementById(id).classList.remove('hidden');
+    if (id === 'shop') renderCandies();
+    if (id === 'cart') renderCart();
+  }
+
+  function renderCandies() {
+    const candyListEl = document.getElementById('candyList');
+    candyListEl.innerHTML = '';
+    candies.forEach(c => {
+      const div = document.createElement('div');
+      div.className = 'candy-item';
+      div.innerHTML = `<img src="${c.img}" alt="${c.name}"><h3>${c.name}</h3><p>R${c.price}</p><button onclick="addToCart(${c.id})">Add to Cart</button>`;
+      candyListEl.appendChild(div);
+    });
+  }
+
+  function addToCart(id) {
+  const item = candies.find(c => c.id === id);
+  const found = cart.find(i => i.id === id);
+  if (found) {
+    found.quantity++;
+  } else {
+    cart.push({ ...item, quantity: 1 });
+  }
+
+  updateCartCount();
+  renderCart(); // still updates cart in background
+  showToast(`${item.name} added to cart!`);
+}
+
+
+  function updateCartCount() {
+    document.getElementById('cartCount').textContent = cart.reduce((sum, i) => sum + i.quantity, 0);
+  }
+
+  function renderCart() {
+    const cartItemsEl = document.getElementById('cartItems');
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    cartItemsEl.innerHTML = '';
+    if (cart.length === 0) {
+      cartItemsEl.innerHTML = '<p>Your cart is empty.</p>';
+      checkoutBtn.classList.add('hidden');
+      return;
+    }
+    checkoutBtn.classList.remove('hidden');
+    cart.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'cart-item';
+      div.innerHTML = `<span>${item.name} x${item.quantity} - R${item.price * item.quantity}</span><button onclick="removeFromCart(${item.id})">Remove</button>`;
+      cartItemsEl.appendChild(div);
+    });
+  }
+
+  function removeFromCart(id) {
+    cart = cart.filter(i => i.id !== id);
+    renderCart();
+    updateCartCount();
+  }
+
+  function tryCheckout() {
+    if (cart.length === 0) {
+      showToast('Your cart is empty!');
+      showSection('shop');
+    } else {
+      showSection('checkout');
+    }
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 2500);
+  }
+
+  document.getElementById('checkoutForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const address = document.getElementById('address').value.trim();
+    const payment = document.getElementById('payment').value;
+    if (!name || !email || !address || !payment) {
+      showToast('Please fill in all fields.');
+      return;
+    }
+    if (payment !== 'cash') {
+      const total = cart.reduce((sum, item) => sum + item.quantity * item.price, 0);
+      document.getElementById('pf_amount').value = total.toFixed(2);
+      document.getElementById('pf_name').value = name;
+      document.getElementById('pf_email').value = email;
+      document.getElementById('payfastForm').submit();
+    } else {
+      showToast(`Thank you ${name}, your order is confirmed!`);
+      cart = [];
+      updateCartCount();
+      this.reset();
+      showSection('home');
+    }
+  });
+
+  document.getElementById('contactForm').addEventListener('submit', function(e){
+    e.preventDefault();
+    showToast('Thanks for your message!');
+    this.reset();
+  });
+
+  showSection('home');
+</script>
+
+</body>
+</html>
